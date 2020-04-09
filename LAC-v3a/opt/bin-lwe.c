@@ -60,94 +60,57 @@ int gen_e(unsigned char *e,  unsigned char *seed)
 	return 0;
 }
 
-static int gen_index(uint16_t *index, unsigned char *seed)
-{
-	int i,rbuf_len;
-	rbuf_len=SAMPLE_LEN+SAMPLE_LEN*(DIM_N>>8)/16;
-	unsigned char  rbuf[DIM_N*2],*p;
-	
-	pseudo_random_bytes(rbuf,rbuf_len,seed);
-	p=rbuf+SAMPLE_LEN;
-	
-	#if defined(LAC128) || defined(LAC_LIGHT)
-	//prepare random index
-	for(i=0;i<SAMPLE_LEN;i+=8)
-	{
-		index[i]=(rbuf[i]^(((*p)<<1)&0x100));
-		index[i+1]=(rbuf[i+1]^(((*p)<<2)&0x100));
-		index[i+2]=(rbuf[i+2]^(((*p)<<3)&0x100));
-		index[i+3]=(rbuf[i+3]^(((*p)<<4)&0x100));
-		index[i+4]=(rbuf[i+4]^(((*p)<<5)&0x100));
-		index[i+5]=(rbuf[i+5]^(((*p)<<6)&0x100));
-		index[i+6]=(rbuf[i+6]^(((*p)<<7)&0x100));
-		index[i+7]=(rbuf[i+7]^(((*p)<<8)&0x100));
-		p++;
-	}
-	#else
-	for(i=0;i<SAMPLE_LEN;i+=4)
-	{
-		index[i]=(rbuf[i]^(((*p)<<2)&0x300));
-		index[i+1]=(rbuf[i+1]^(((*p)<<4)&0x300));
-		index[i+2]=(rbuf[i+2]^(((*p)<<6)&0x300));
-		index[i+3]=(rbuf[i+3]^(((*p)<<2)&0x300));
-		p++;
-	}
-	#endif
-	
-	return 0;
-}
-
-//for r and s
+//for r,s
 int gen_r(unsigned char *r,  unsigned char *seed)
 {
-	
-	if(r==NULL)
-	{
-		return 1;
-	}
-	
-	int i,p;
-	uint16_t tmp;
-	uint16_t  r_buf[DIM_N],index[SAMPLE_LEN],tmp_index,index_mk;
-	unsigned int mask_p,loop=SAMPLE_LEN;
+    
+    if(r==NULL)
+    {
+        return 1;
+    }
+    
+    int i,p;
+    uint16_t tmp;
+    uint16_t  r_buf[DIM_N],index[SAMPLE_LEN],tmp_index,index_mk;
+    uint16_t mk=DIM_N-1;
+    unsigned int mask_p,loop=SAMPLE_LEN;
 
-	//init r to be 1,2,3,4,5
-	for(i=0;i<DIM_N;i++)
-	{
-		r_buf[i]=i;
-	}
-	
-	
-	p=0;
-	while(p<NUM_ONE*2)
-	{
-		gen_index(index,seed);
-	    //shuffle
-		for(i=0;i<loop;i++)
-		{
-			//check index
-			index_mk=index[i];
-			tmp_index=index_mk>=p ? index_mk: p;
-			mask_p=index_mk>=p ? 1:0;
-		    //swap
-			tmp=r_buf[tmp_index];
-			r_buf[tmp_index]=r_buf[p];
-			r_buf[p]=tmp;
-			//move to the next
-			p+=mask_p;
-		}
-		//update seed
-		if(p<NUM_ONE*2)
-		{
-			memcpy(seed,(unsigned char *)index,SEED_LEN);
-		}
-	}
-	//compy the first NUM_ONE positions to r
-	memcpy(r,r_buf,NUM_ONE*2*sizeof(uint16_t));
-	
-	return 0;
+    //init r to be 1,2,3,4,5
+    for(i=0;i<DIM_N;i++)
+    {
+        r_buf[i]=i;
+    }
+    
+    
+    p=0;
+    while(p<NUM_ONE*2)
+    {
+        pseudo_random_bytes((unsigned char *)index,SAMPLE_LEN*2,seed);
+        //shuffle
+        for(i=0;i<loop;i++)
+        {
+            //check index
+            index_mk=index[i]&mk;
+            tmp_index=index_mk>=p ? index_mk: p;
+            mask_p=index_mk>=p ? 1:0;
+            //swap
+            tmp=r_buf[tmp_index];
+            r_buf[tmp_index]=r_buf[p];
+            r_buf[p]=tmp;
+            //move to the next
+            p+=mask_p;
+        }
+        //update seed
+        if(p<NUM_ONE*2)
+        {
+            memcpy(seed,(unsigned char *)index,SEED_LEN);
+        }
+    }
+    //compy the first NUM_ONE positions to r
+    memcpy(r,r_buf,NUM_ONE*2*sizeof(uint16_t));
+    
+    return 0;
 }
-
 
 // poly_mul  b=as
 int mul_core(const unsigned char *a, const unsigned char *s, int64_t *sum1, int64_t *sum2, unsigned int vec_num)
