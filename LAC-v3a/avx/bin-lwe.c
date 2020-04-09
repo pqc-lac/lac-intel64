@@ -139,7 +139,7 @@ int mul_core(const unsigned char *a, const unsigned char *s, int16_t *sum_one, i
 	for(i=0;i<DIM_N;i+=32)
 	{
 		tmp_v1 = _mm256_lddqu_si256((__m256i *)(a+i));
-		tmp_v1 = _mm256_sub_epi8(_mm256_set1_epi8(Q),tmp_v1);
+		tmp_v1 = _mm256_sub_epi8(_mm256_set1_epi8((char)Q),tmp_v1);
 	
 		_mm256_store_si256((__m256i*)(v+i),tmp_v1);
 	}
